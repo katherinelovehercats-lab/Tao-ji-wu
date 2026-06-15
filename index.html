@@ -152,6 +152,26 @@
     }
     .shake { animation: shake 0.4s ease; }
     .empty-state { color: var(--text-secondary); opacity: 0.5; text-align: center; padding: 3rem 0; font-size: 0.9rem; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: var(--bg-dark); padding: 0.6rem 1.5rem; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 600; z-index: 999;
+      opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Category tabs */
+    .cat-tab {
+      padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer;
+      font-size: 0.8rem; transition: all 0.2s; text-align: center;
+      border: 1px solid rgba(212,165,116,0.1);
+    }
+    .cat-tab:hover { border-color: rgba(212,165,116,0.3); background: rgba(212,165,116,0.05); }
+    .cat-tab.active { border-color: var(--gold); background: rgba(212,165,116,0.12); color: var(--gold-light); }
   </style>
 </head>
 <body>
@@ -353,6 +373,9 @@
   </div>
 </div>
 
+<!-- ==================== TOAST ==================== -->
+<div id="toast"></div>
+
 <script>
 // ===== DATA =====
 const STORAGE_KEY = 'taojiwu_notes';
@@ -361,7 +384,7 @@ const PWD_KEY = 'taojiwu_pwd';
 // department configs
 const DEPTS = {
   chief:      { label: '毛球球', icon: '🐱', subtitle: '大总管' },
-  wenxue:     { label: '毛夭夭', icon: '🦚', subtitle: '品桃啖味' },
+  wenxue:     { label: '毛夭夭', icon: '🦚', subtitle: '品桃啖味', categories: ['阅读笔记', '阅读书籍', '自由的房间'] },
   xuanxue:    { label: '毛果果', icon: '🐉', subtitle: '春望桃符' },
   gongzuoliu: { label: '福丸丸', icon: '🐢', subtitle: '投桃报李' },
   zhexue:     { label: '遇桃成蹊', icon: '🌸', subtitle: '哲学部' },
@@ -369,6 +392,13 @@ const DEPTS = {
   lixindao_dream:  { label: '🌙 梦境记录', icon: '🌙', subtitle: '梨心岛' },
   lixindao_spirit: { label: '✨ 灵性记录', icon: '✨', subtitle: '梨心岛' },
   lixindao_letter: { label: '💌 私人信件', icon: '💌', subtitle: '梨心岛' },
+};
+
+// Category → content-index path prefix mapping
+const CAT_PREFIX = {
+  '阅读笔记': '文学/阅读笔记/',
+  '阅读书籍': '文学/阅读书籍/',
+  '自由的房间': '文学/自由的房间/',
 };
 
 // Department → content-index directory mapping
@@ -527,6 +557,14 @@ function refreshBrief() {
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function now() { return new Date().toLocaleString('zh-CN', { hour12: false }); }
 
+// ===== TOAST =====
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
 // ===== HUB =====
 function updateHubCounts() {
   ['lixindao_dream','lixindao_spirit','lixindao_letter'].forEach(k => {
@@ -542,6 +580,7 @@ updateHubCounts();
 // ===== WORKSPACE =====
 let currentDept = null;
 let currentNoteId = null;
+let currentCategory = null;
 let isDirty = false;
 
 function openWorkspace(dept) {
@@ -551,6 +590,7 @@ function openWorkspace(dept) {
   }
   currentDept = dept;
   currentNoteId = null;
+  currentCategory = null;
   isDirty = false;
   const info = DEPTS[dept];
   document.getElementById('wsTitle').textContent = info.subtitle ? info.icon + ' ' + info.label : info.label;
@@ -569,24 +609,95 @@ function closeWorkspace() {
   document.getElementById('workspace').classList.remove('open');
   currentDept = null;
   currentNoteId = null;
+  currentCategory = null;
   isDirty = false;
+}
+
+function setCategory(cat) {
+  currentCategory = cat;
+  currentNoteId = null;
+  document.getElementById('wsNoteTitle').textContent = '选择一篇笔记';
+  document.getElementById('noteEditor').value = '';
+  document.getElementById('deleteBtn').classList.add('hidden');
+  renderNoteList();
+}
+
+function getFileNotesForCategory(cat) {
+  const dir = '文学';
+  const prefix = CAT_PREFIX[cat];
+  if (!prefix || !contentIndex || !contentIndex[dir]) return [];
+  return contentIndex[dir]
+    .filter(f => f.path.startsWith(prefix))
+    .map(f => ({ id: 'file:' + f.path, title: f.title, isFile: true, filePath: f.path, updatedAt: '📄 文件' }));
+}
+
+function getLocalNotesForCategory(cat) {
+  const notes = getDeptNotes(currentDept);
+  if (!cat) return notes;
+  return notes.filter(n => n.category === cat);
 }
 
 function renderNoteList() {
   const container = document.getElementById('noteList');
-  const notes = getDeptNotes(currentDept);
   const countEl = document.getElementById('wsNoteCount');
+  const info = DEPTS[currentDept];
 
-  // Get file-based notes from content-index
+  // Department with categories: show category tabs first
+  if (info.categories) {
+    if (!currentCategory) {
+      // Show category cards
+      container.innerHTML = info.categories.map(c => {
+        const dir = '文学';
+        const prefix = CAT_PREFIX[c];
+        const fileCount = (contentIndex && contentIndex[dir]) ? contentIndex[dir].filter(f => f.path.startsWith(prefix)).length : 0;
+        return `<div class="cat-tab mb-2 flex items-center gap-2" onclick="setCategory('${c}')">
+          <span class="text-lg">${c === '阅读笔记' ? '📓' : c === '阅读书籍' ? '📚' : '✍️'}</span>
+          <div class="flex-1 text-left">
+            <div class="font-calligraphy text-[var(--gold-light)]">${c}</div>
+            <div class="text-xs text-[var(--text-secondary)] opacity-60">${fileCount} 篇</div>
+          </div>
+        </div>`;
+      }).join('');
+      countEl.textContent = info.categories.length + ' 个板块';
+      return;
+    }
+
+    // Show notes for selected category
+    const fileNotes = getFileNotesForCategory(currentCategory);
+    const localNotes = getLocalNotesForCategory(currentCategory);
+    const allItems = [
+      ...fileNotes,
+      ...localNotes.map(n => ({ ...n, isFile: false }))
+    ];
+    countEl.textContent = allItems.length + ' 条';
+
+    // Back button + category label
+    const backBtn = `<div class="note-item mb-2 opacity-60" onclick="currentCategory=null;renderNoteList()">
+      <div class="flex items-center gap-1"><span>←</span><span class="text-sm">${currentCategory}</span></div>
+    </div>`;
+
+    if (!allItems.length) {
+      container.innerHTML = backBtn + '<div class="empty-state">暂无笔记<br>点右上角 + 新建</div>';
+      return;
+    }
+    container.innerHTML = backBtn + allItems.map(n => {
+      const active = (n.isFile ? 'file:' + n.filePath : n.id) === currentNoteId;
+      return `<div class="note-item ${active ? 'active' : ''}" onclick="selectNote('${n.isFile ? 'file:' + n.filePath : n.id}')">
+        <div class="truncate ${n.isFile ? 'opacity-70' : ''}">${n.isFile ? '📄 ' : ''}${n.title || '无标题'}</div>
+        <div class="date">${n.updatedAt || ''}</div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  // Regular departments (no categories): show notes flat
+  const notes = getDeptNotes(currentDept);
   const dir = DEPT_DIRS[currentDept];
   const fileNotes = (contentIndex && dir && contentIndex[dir]) ? contentIndex[dir] : [];
-
-  // Merge: file notes first (read-only), then localStorage notes
   const allItems = [
     ...fileNotes.map(f => ({ id: 'file:' + f.path, title: f.title, isFile: true, filePath: f.path, updatedAt: '📄 文件' })),
     ...notes.map(n => ({ ...n, isFile: false }))
   ];
-
   countEl.textContent = allItems.length + ' 条';
 
   if (!allItems.length) {
@@ -637,11 +748,11 @@ function saveNote() {
   if (!currentDept) return;
   // Don't save file-based notes
   if (currentNoteId && currentNoteId.startsWith('file:')) {
-    alert('文件笔记只读，请新建笔记来保存修改');
+    showToast('📄 文件笔记只读，请新建笔记');
     return;
   }
   const content = document.getElementById('noteEditor').value.trim();
-  if (!content) { alert('内容不能为空'); return; }
+  if (!content) { showToast('内容不能为空'); return; }
   const notes = getDeptNotes(currentDept);
   const title = document.getElementById('wsNoteTitle').textContent === '选择一篇笔记' ? '未命名' : document.getElementById('wsNoteTitle').textContent;
   if (currentNoteId) {
@@ -653,7 +764,7 @@ function saveNote() {
       if (!notes[idx].title || notes[idx].title === '无标题') notes[idx].title = title;
     }
   } else {
-    const newNote = { id: genId(), title: title === '选择一篇笔记' ? '未命名' : title, content, createdAt: now(), updatedAt: now() };
+    const newNote = { id: genId(), title: title === '选择一篇笔记' ? '未命名' : title, content, category: currentCategory || '', createdAt: now(), updatedAt: now() };
     notes.unshift(newNote);
     currentNoteId = newNote.id;
   }
@@ -662,6 +773,7 @@ function saveNote() {
   document.getElementById('wsNoteTitle').textContent = title;
   document.getElementById('deleteBtn').classList.remove('hidden');
   renderNoteList();
+  showToast('✅ 已保存');
 }
 
 function discardEdit() {
@@ -710,7 +822,7 @@ function closeNewNoteModal() {
 function confirmNewNote() {
   const title = document.getElementById('newNoteTitle').value.trim() || '未命名';
   const notes = getDeptNotes(currentDept);
-  const newNote = { id: genId(), title, content: '', createdAt: now(), updatedAt: now() };
+  const newNote = { id: genId(), title, content: '', category: currentCategory || '', createdAt: now(), updatedAt: now() };
   notes.unshift(newNote);
   putDeptNotes(currentDept, notes);
   currentNoteId = newNote.id;
@@ -721,6 +833,7 @@ function confirmNewNote() {
   renderNoteList();
   closeNewNoteModal();
   document.getElementById('noteEditor').focus();
+  showToast('📝 已创建');
 }
 
 // ===== LIXINDAO =====
