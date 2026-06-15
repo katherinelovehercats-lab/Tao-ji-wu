@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>桃吉屋</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #D4A574; --gold-light: #E8C99B; --gold-dark: #B8895C;
+      --bg-dark: #1a1410; --bg-card: #2a221c; --text-primary: #F5E6D3;
+      --text-secondary: #B8A48C; --cinnabar: #C23B22; --jade: #5B8C5A;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Serif SC', serif; background: var(--bg-dark);
+      color: var(--text-primary); min-height: 100vh; overflow-x: hidden;
+    }
+    .font-calligraphy { font-family: 'Ma Shan Zheng', cursive; }
+
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 999;
+    }
+
+    .glass-card {
+      background: linear-gradient(135deg, rgba(42,34,28,0.9), rgba(42,34,28,0.6));
+      backdrop-filter: blur(12px); border: 1px solid rgba(212,165,116,0.15);
+      border-radius: 16px; transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(212,165,116,0.4); transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 30px rgba(212,165,116,0.05);
+    }
+    .glass-card-static {
+      background: linear-gradient(135deg, rgba(42,34,28,0.9), rgba(42,34,28,0.6));
+      backdrop-filter: blur(12px); border: 1px solid rgba(212,165,116,0.15);
+      border-radius: 16px;
+    }
+
+    .dept-card { padding: 1.25rem; cursor: pointer; }
+    .dept-card .icon-circle {
+      width: 56px; height: 56px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 1.5rem;
+      margin: 0 auto 0.5rem; border: 2px solid var(--gold-dark);
+      background: rgba(212,165,116,0.08); transition: all 0.3s ease;
+    }
+    .dept-card:hover .icon-circle {
+      border-color: var(--gold-light); background: rgba(212,165,116,0.15);
+      box-shadow: 0 0 20px rgba(212,165,116,0.15);
+    }
+
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .anim { animation: fadeInUp 0.6s ease both; }
+    .d1 { animation-delay: 0.1s; } .d2 { animation-delay: 0.2s; }
+    .d3 { animation-delay: 0.3s; } .d4 { animation-delay: 0.4s; }
+    .d5 { animation-delay: 0.5s; } .d6 { animation-delay: 0.6s; }
+    .d7 { animation-delay: 0.7s; }
+
+    @keyframes guardianFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    @keyframes guardianBreath { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:.6;transform:scale(1.05)} }
+    .g-float1 { animation: guardianFloat 4s ease-in-out infinite; }
+    .g-float2 { animation: guardianFloat 4s ease-in-out infinite 0.5s; }
+    .g-glow { animation: guardianBreath 3s ease-in-out infinite; }
+
+    /* ---- Workspace Panel ---- */
+    #workspace {
+      position: fixed; inset: 0; z-index: 100; display: none;
+      background: var(--bg-dark);
+    }
+    #workspace.open { display: flex; }
+
+    .ws-sidebar {
+      width: 260px; min-width: 260px; background: #1f1814;
+      border-right: 1px solid rgba(212,165,116,0.1);
+      display: flex; flex-direction: column; padding: 1.25rem;
+    }
+    .ws-main { flex: 1; display: flex; flex-direction: column; padding: 1.5rem; overflow: hidden; }
+
+    .note-item {
+      padding: 0.65rem 0.75rem; border-radius: 8px; cursor: pointer;
+      border-left: 2px solid transparent; transition: all 0.2s;
+      font-size: 0.85rem; margin-bottom: 2px;
+    }
+    .note-item:hover { background: rgba(212,165,116,0.08); }
+    .note-item.active { background: rgba(212,165,116,0.12); border-left-color: var(--gold); }
+    .note-item .date { font-size: 0.7rem; color: var(--text-secondary); opacity: 0.6; }
+
+    .note-content {
+      flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(212,165,116,0.1);
+      border-radius: 10px; padding: 1.25rem; overflow-y: auto;
+      font-size: 0.9rem; line-height: 1.8; white-space: pre-wrap; outline: none;
+      color: var(--text-primary); font-family: 'Noto Serif SC', serif;
+    }
+    .note-content:focus { border-color: rgba(212,165,116,0.3); }
+
+    /* ---- Modal ---- */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(6px); z-index: 200; display: none;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+      background: linear-gradient(135deg, #2a221c, #1f1814);
+      border: 1px solid rgba(212,165,116,0.3); border-radius: 16px;
+      padding: 2rem; width: 90%; max-width: 520px;
+    }
+    .modal-input {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(212,165,116,0.2);
+      border-radius: 8px; padding: 0.6rem 0.8rem; color: var(--text-primary);
+      font-family: 'Noto Serif SC', serif; width: 100%; outline: none;
+    }
+    .modal-input:focus { border-color: var(--gold); box-shadow: 0 0 15px rgba(212,165,116,0.1); }
+
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: var(--bg-dark); font-weight: 600; padding: 0.5rem 1.25rem;
+      border-radius: 8px; border: none; cursor: pointer;
+      font-family: 'Noto Serif SC', serif; font-size: 0.85rem;
+      transition: all 0.3s ease;
+    }
+    .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212,165,116,0.25); }
+    .btn-ghost {
+      background: transparent; border: 1px solid rgba(212,165,116,0.2);
+      color: var(--text-secondary); padding: 0.5rem 1.25rem;
+      border-radius: 8px; cursor: pointer; font-family: 'Noto Serif SC', serif;
+      font-size: 0.85rem; transition: all 0.2s;
+    }
+    .btn-ghost:hover { border-color: rgba(212,165,116,0.4); color: var(--text-primary); }
+    .btn-danger {
+      background: transparent; border: 1px solid rgba(194,59,34,0.3);
+      color: var(--cinnabar); padding: 0.5rem 1.25rem;
+      border-radius: 8px; cursor: pointer; font-family: 'Noto Serif SC', serif;
+      font-size: 0.85rem; transition: all 0.2s;
+    }
+    .btn-danger:hover { background: rgba(194,59,34,0.1); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold-dark); }
+
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+    }
+    .shake { animation: shake 0.4s ease; }
+    .empty-state { color: var(--text-secondary); opacity: 0.5; text-align: center; padding: 3rem 0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<!-- ==================== HUB VIEW ==================== -->
+<div id="hub" class="min-h-screen max-w-5xl mx-auto px-6 py-12 relative">
+
+  <header class="text-center mb-10 anim d1">
+    <div class="inline-block relative">
+      <h1 class="font-calligraphy text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-[var(--gold-light)] via-[var(--gold)] to-[var(--gold-dark)]">桃吉屋</h1>
+      <div class="absolute -top-3 -right-4 text-2xl opacity-60">🏠</div>
+    </div>
+    <p class="mt-2 text-[var(--text-secondary)] text-lg font-calligraphy tracking-wider">胖桃无限流集团</p>
+    <div class="w-16 h-px mx-auto mt-3 bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent"></div>
+  </header>
+
+  <!-- ==================== 每日简报 ==================== -->
+  <div class="anim d2 mb-8">
+    <div class="glass-card-static overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 cursor-pointer select-none" onclick="toggleBrief()">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">📰</span>
+          <span class="font-calligraphy text-xl text-[var(--gold-light)]">每日简报</span>
+          <span class="text-xs text-[var(--text-secondary)] opacity-60" id="briefDate"></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="btn-ghost text-xs py-1 px-3" onclick="event.stopPropagation();refreshBrief()" id="refreshBriefBtn">
+            <i class="fa fa-refresh mr-1"></i>刷新
+          </button>
+          <span id="briefArrow" class="text-[var(--text-secondary)] transition-transform duration-300" style="display:inline-block;">▼</span>
+        </div>
+      </div>
+      <div id="briefContent" class="px-5 pb-4" style="display:none;">
+        <div id="briefLoading" class="text-center py-6 text-[var(--text-secondary)] text-sm">
+          <i class="fa fa-spinner fa-spin mr-2"></i>正在抓取今日热点…<br>
+          <span class="text-xs opacity-60">需要 OpenCLI 浏览器扩展连接</span>
+        </div>
+        <div id="briefReady" style="display:none;">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="briefGrid"></div>
+          <div class="mt-3 text-right text-xs text-[var(--text-secondary)] opacity-40" id="briefUpdateTime"></div>
+        </div>
+        <div id="briefEmpty" style="display:none;" class="text-center py-6 text-[var(--text-secondary)] text-sm">
+          📭 暂无简报数据<br>
+          <span class="text-xs opacity-60">点击「刷新」按钮抓取今日热点</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 大总管 + 遇桃成蹊 -->
+  <div class="text-center mb-6 anim d2">
+    <div class="flex items-center justify-center gap-3">
+      <span class="text-5xl g-float2 opacity-80">🐯</span>
+      <div class="glass-card inline-block px-10 py-5 dept-card max-w-md mx-auto" onclick="openWorkspace('chief')">
+        <div class="icon-circle text-3xl" style="font-size:2rem;">🐱</div>
+        <h2 class="font-calligraphy text-3xl text-[var(--gold-light)]">毛球球</h2>
+        <p class="text-[var(--text-secondary)] text-xs mt-0.5 tracking-wide">大总管</p>
+      </div>
+      <span class="text-5xl g-float1 opacity-80">🐯</span>
+    </div>
+    <div class="mt-2 flex justify-center">
+      <div class="glass-card inline-flex items-center gap-2 px-5 py-2 cursor-pointer text-sm hover:border-[var(--gold)]/40 transition-all" style="border:1px solid rgba(212,165,116,0.15);border-radius:999px;" onclick="openWorkspace('zhexue')">
+        <span>🌸</span>
+        <span class="text-[var(--text-secondary)] text-xs tracking-wider">遇桃成蹊</span>
+        <span class="text-[var(--text-secondary)] text-xs opacity-40">· 哲学</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-center mb-4 anim d3"><div class="w-px h-6 bg-gradient-to-b from-[var(--gold-dark)] to-transparent"></div></div>
+
+  <!-- 部门 -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 anim d4">
+    <div class="glass-card dept-card text-center" onclick="openWorkspace('wenxue')">
+      <div class="icon-circle">🦚</div>
+      <h3 class="font-calligraphy text-xl text-[var(--gold-light)]">毛夭夭</h3>
+      <p class="text-[var(--text-secondary)] text-xs tracking-wider">品桃啖味 · 孔雀</p>
+    </div>
+    <div class="glass-card dept-card text-center" onclick="openWorkspace('xuanxue')">
+      <div class="icon-circle">🐉</div>
+      <h3 class="font-calligraphy text-xl text-[var(--gold-light)]">毛果果</h3>
+      <p class="text-[var(--text-secondary)] text-xs tracking-wider">春望桃符 · 青龙</p>
+    </div>
+    <div class="glass-card dept-card text-center" onclick="openWorkspace('gongzuoliu')">
+      <div class="icon-circle">🐢</div>
+      <h3 class="font-calligraphy text-xl text-[var(--gold-light)]">福丸丸</h3>
+      <p class="text-[var(--text-secondary)] text-xs tracking-wider">投桃报李 · 玄龟</p>
+    </div>
+    <div class="glass-card dept-card text-center" onclick="openWorkspace('sheying')">
+      <div class="icon-circle">🍑</div>
+      <h3 class="font-calligraphy text-xl text-[var(--gold-light)]">毛桃桃</h3>
+      <p class="text-[var(--text-secondary)] text-xs tracking-wider">摄影影视部</p>
+    </div>
+  </div>
+
+  <div class="flex justify-center mt-6 mb-4 anim d5"><div class="w-px h-6 bg-gradient-to-b from-[var(--gold-dark)]/50 to-[var(--cinnabar)]/30"></div></div>
+
+  <!-- 梨心岛 -->
+  <div class="anim d6" id="lixindao-section">
+    <div class="glass-card-static text-center py-8 px-6 max-w-lg mx-auto" id="lixindaoCard">
+      <div id="lixindaoLocked">
+        <div class="flex justify-center gap-6 mb-4">
+          <span class="g-float1 text-3xl">🐲</span>
+          <span class="g-glow text-3xl">🗝️</span>
+          <span class="g-float2 text-3xl">🦊</span>
+        </div>
+        <h2 class="font-calligraphy text-3xl text-[var(--gold-light)] flex items-center justify-center gap-2">
+          🏝️ 梨心岛 <i class="fa fa-lock text-sm" style="color:var(--cinnabar);"></i>
+        </h2>
+        <p class="text-[var(--text-secondary)] text-xs mt-2">梦境 · 灵性 · 私信</p>
+        <p class="text-[var(--text-secondary)] text-xs mt-0.5 opacity-60">🐲黑龙 · 🦊白狐守护</p>
+        <button onclick="openLixindaoModal()" class="mt-5 btn-gold text-sm"><i class="fa fa-unlock-alt mr-2"></i>开启梨心岛</button>
+      </div>
+      <div id="lixindaoUnlocked" style="display:none;">
+        <h2 class="font-calligraphy text-3xl text-[var(--gold-light)] mb-4">🏝️ 梨心岛</h2>
+        <div class="space-y-2 text-left px-2">
+          <div class="glass-card-static dept-card flex items-center gap-3" onclick="openWorkspace('lixindao_dream')">
+            <span class="text-2xl">🌙</span>
+            <div><p class="text-[var(--text-primary)]">梦境记录</p><p class="text-[var(--text-secondary)] text-xs" id="count_dream">0 篇</p></div>
+          </div>
+          <div class="glass-card-static dept-card flex items-center gap-3" onclick="openWorkspace('lixindao_spirit')">
+            <span class="text-2xl">✨</span>
+            <div><p class="text-[var(--text-primary)]">灵性记录</p><p class="text-[var(--text-secondary)] text-xs" id="count_spirit">0 篇</p></div>
+          </div>
+          <div class="glass-card-static dept-card flex items-center gap-3" onclick="openWorkspace('lixindao_letter')">
+            <span class="text-2xl">💌</span>
+            <div><p class="text-[var(--text-primary)]">私人信件</p><p class="text-[var(--text-secondary)] text-xs" id="count_letter">0 篇</p></div>
+          </div>
+        </div>
+        <button onclick="lockLixindao()" class="mt-4 text-xs text-[var(--text-secondary)] hover:text-[var(--gold)] underline opacity-60">重新锁定</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="text-center mt-14 pt-6 anim d7">
+    <div class="w-12 h-px mx-auto mb-3 bg-gradient-to-r from-transparent via-[var(--gold-dark)]/40 to-transparent"></div>
+    <p class="text-[var(--text-secondary)] text-xs opacity-40 font-calligraphy tracking-widest">桃吉屋 · 丙午年</p>
+  </footer>
+</div>
+
+<!-- ==================== WORKSPACE PANEL ==================== -->
+<div id="workspace">
+  <!-- Sidebar -->
+  <div class="ws-sidebar">
+    <div class="flex items-center justify-between mb-5">
+      <button onclick="closeWorkspace()" class="text-[var(--text-secondary)] hover:text-[var(--gold)] transition text-lg"><i class="fa fa-arrow-left"></i></button>
+      <span class="font-calligraphy text-xl text-[var(--gold-light)]" id="wsTitle">笔记</span>
+      <button onclick="showNewNoteModal()" class="text-[var(--gold)] hover:text-[var(--gold-light)] transition text-lg"><i class="fa fa-plus-circle"></i></button>
+    </div>
+    <div class="flex-1 overflow-y-auto" id="noteList"></div>
+    <div class="pt-3 text-center text-xs text-[var(--text-secondary)] opacity-40" id="wsNoteCount"></div>
+  </div>
+  <!-- Main -->
+  <div class="ws-main">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-[var(--gold)] text-xs"><i class="fa fa-file-text-o"></i></span>
+        <span class="text-sm text-[var(--text-secondary)]" id="wsNoteTitle">选择一篇笔记</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn-ghost text-xs hidden" id="deleteBtn" onclick="deleteNote()"><i class="fa fa-trash-o"></i> 删除</button>
+      </div>
+    </div>
+    <textarea class="note-content" id="noteEditor" placeholder="在这里写内容…"></textarea>
+    <div class="flex justify-end gap-2 mt-3">
+      <button class="btn-ghost text-xs" onclick="discardEdit()">放弃</button>
+      <button class="btn-gold text-xs" onclick="saveNote()"><i class="fa fa-save mr-1"></i>保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== NEW NOTE MODAL ==================== -->
+<div class="modal-overlay" id="newNoteModal">
+  <div class="modal-box">
+    <h3 class="font-calligraphy text-xl text-[var(--gold-light)] mb-4">新笔记</h3>
+    <input class="modal-input mb-3" id="newNoteTitle" placeholder="笔记标题" maxlength="60">
+    <div class="flex gap-2 justify-end mt-4">
+      <button class="btn-ghost text-sm" onclick="closeNewNoteModal()">取消</button>
+      <button class="btn-gold text-sm" onclick="confirmNewNote()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== LIXINDAO PASSWORD MODAL ==================== -->
+<div class="modal-overlay" id="lixindaoModal">
+  <div class="modal-box text-center">
+    <div class="flex justify-center gap-4 mb-3">
+      <span class="g-float1 text-3xl">🐲</span>
+      <span class="g-float2 text-3xl">🦊</span>
+    </div>
+    <h3 class="font-calligraphy text-2xl text-[var(--gold-light)] mb-1">梨心岛 · 准入验证</h3>
+    <p class="text-[var(--text-secondary)] text-xs mb-5">黑龙与白狐在此守候</p>
+    <input type="password" id="lixindaoPwd" class="modal-input text-center mb-2" placeholder="输入通行密码" autocomplete="off" onkeydown="if(event.key==='Enter') checkLixindaoPwd()">
+    <p class="text-[var(--cinnabar)] text-xs h-5" id="lixindaoPwdError"></p>
+    <div class="flex gap-3 justify-center mt-3">
+      <button class="btn-ghost text-sm" onclick="closeLixindaoModal()">取消</button>
+      <button class="btn-gold text-sm" onclick="checkLixindaoPwd()"><i class="fa fa-key mr-2"></i>验证</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const STORAGE_KEY = 'taojiwu_notes';
+const PWD_KEY = 'taojiwu_pwd';
+
+// department configs
+const DEPTS = {
+  chief:      { label: '毛球球', icon: '🐱', subtitle: '大总管' },
+  wenxue:     { label: '毛夭夭', icon: '🦚', subtitle: '品桃啖味' },
+  xuanxue:    { label: '毛果果', icon: '🐉', subtitle: '春望桃符' },
+  gongzuoliu: { label: '福丸丸', icon: '🐢', subtitle: '投桃报李' },
+  zhexue:     { label: '遇桃成蹊', icon: '🌸', subtitle: '哲学部' },
+  sheying:    { label: '毛桃桃', icon: '🍑', subtitle: '摄影影视' },
+  lixindao_dream:  { label: '🌙 梦境记录', icon: '🌙', subtitle: '梨心岛' },
+  lixindao_spirit: { label: '✨ 灵性记录', icon: '✨', subtitle: '梨心岛' },
+  lixindao_letter: { label: '💌 私人信件', icon: '💌', subtitle: '梨心岛' },
+};
+
+function getNotes() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) { return {}; }
+}
+function saveNotesAll(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  updateHubCounts();
+}
+function getDeptNotes(dept) {
+  const all = getNotes();
+  return all[dept] || [];
+}
+function putDeptNotes(dept, list) {
+  const all = getNotes();
+  all[dept] = list;
+  saveNotesAll(all);
+}
+
+// ===== 每日简报 =====
+const BRIEF_KEY = 'taojiwu_brief';
+const BRIEF_OPEN_KEY = 'taojiwu_brief_open';
+
+function getBrief() {
+  try { return JSON.parse(localStorage.getItem(BRIEF_KEY)) || null; } catch(e) { return null; }
+}
+
+function toggleBrief() {
+  const content = document.getElementById('briefContent');
+  const arrow = document.getElementById('briefArrow');
+  const isOpen = content.style.display !== 'none';
+  content.style.display = isOpen ? 'none' : 'block';
+  arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+  localStorage.setItem(BRIEF_OPEN_KEY, isOpen ? '0' : '1');
+  if (!isOpen) loadBrief();
+}
+
+function loadBrief() {
+  const data = getBrief();
+  const loading = document.getElementById('briefLoading');
+  const ready = document.getElementById('briefReady');
+  const empty = document.getElementById('briefEmpty');
+
+  if (!data || !data.items || !data.items.length) {
+    loading.style.display = 'none';
+    ready.style.display = 'none';
+    empty.style.display = 'block';
+    document.getElementById('briefDate').textContent = '';
+    return;
+  }
+
+  loading.style.display = 'none';
+  empty.style.display = 'none';
+  ready.style.display = 'block';
+
+  const today = new Date().toLocaleDateString('zh-CN');
+  if (data.date === today) {
+    document.getElementById('briefDate').textContent = '📅 ' + data.date;
+  } else {
+    document.getElementById('briefDate').textContent = '📅 ' + data.date + '（待更新）';
+  }
+  document.getElementById('briefUpdateTime').textContent = '更新于 ' + (data.updatedAt || '');
+
+  const grid = document.getElementById('briefGrid');
+  grid.innerHTML = data.items.filter(cat => cat.items.length > 0).map(cat => `
+    <div class="glass-card-static p-3">
+      <div class="flex items-center gap-2 mb-2 pb-1 border-b border-[var(--gold-dark)]/20">
+        <span>${cat.icon}</span>
+        <span class="font-calligraphy text-sm text-[var(--gold-light)]">${cat.name}</span>
+        <span class="text-xs text-[var(--text-secondary)] opacity-40 ml-auto">${cat.items.length}条</span>
+      </div>
+      <div class="space-y-1.5">
+        ${cat.items.map((item, idx) => `
+          <div class="text-xs leading-relaxed ${item.url ? 'cursor-pointer hover:text-[var(--gold-light)]' : ''}" ${item.url ? `onclick="window.open('${item.url}','_blank')"` : ''}>
+            <span class="text-[var(--gold-dark)] mr-1">${idx+1}.</span>
+            <span class="text-[var(--text-primary)]">${item.title}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function refreshBrief() {
+  const btn = document.getElementById('refreshBriefBtn');
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin mr-1"></i>抓取中';
+  btn.disabled = true;
+
+  const loading = document.getElementById('briefLoading');
+  const ready = document.getElementById('briefReady');
+  const empty = document.getElementById('briefEmpty');
+  loading.style.display = 'block';
+  ready.style.display = 'none';
+  empty.style.display = 'none';
+
+  // Try to load from brief.json
+  fetch('./brief.json?t=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error('No data'); return r.json(); })
+    .then(data => {
+      localStorage.setItem(BRIEF_KEY, JSON.stringify(data));
+      loadBrief();
+      loading.style.display = 'none';
+    })
+    .catch(() => {
+      // Fallback: check localStorage for last manual data
+      const existing = getBrief();
+      if (existing && existing.items && existing.items.length) {
+        loadBrief();
+        loading.style.display = 'none';
+        empty.style.display = 'none';
+      } else {
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+      }
+    })
+    .finally(() => {
+      btn.innerHTML = '<i class="fa fa-refresh mr-1"></i>刷新';
+      btn.disabled = false;
+    });
+}
+
+// On page load, try to load brief
+(function initBrief() {
+  const wasOpen = localStorage.getItem(BRIEF_OPEN_KEY) === '1';
+  // Always try fetching latest brief.json
+  fetch('./brief.json?t=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error('No data'); return r.json(); })
+    .then(data => {
+      localStorage.setItem(BRIEF_KEY, JSON.stringify(data));
+      if (wasOpen) {
+        document.getElementById('briefContent').style.display = 'block';
+        document.getElementById('briefArrow').style.transform = 'rotate(180deg)';
+        loadBrief();
+      }
+    })
+    .catch(() => {
+      if (wasOpen) {
+        document.getElementById('briefContent').style.display = 'block';
+        document.getElementById('briefArrow').style.transform = 'rotate(180deg)';
+        loadBrief();
+      }
+    });
+})();
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function now() { return new Date().toLocaleString('zh-CN', { hour12: false }); }
+
+// ===== HUB =====
+function updateHubCounts() {
+  ['lixindao_dream','lixindao_spirit','lixindao_letter'].forEach(k => {
+    const el = document.getElementById('count_' + k.replace('lixindao_',''));
+    if (el) {
+      const n = getDeptNotes(k).length;
+      el.textContent = n + ' 篇';
+    }
+  });
+}
+updateHubCounts();
+
+// ===== WORKSPACE =====
+let currentDept = null;
+let currentNoteId = null;
+let isDirty = false;
+
+function openWorkspace(dept) {
+  if (dept.startsWith('lixindao_')) {
+    const unlocked = document.getElementById('lixindaoUnlocked').style.display !== 'none';
+    if (!unlocked) return;
+  }
+  currentDept = dept;
+  currentNoteId = null;
+  isDirty = false;
+  const info = DEPTS[dept];
+  document.getElementById('wsTitle').textContent = info.subtitle ? info.icon + ' ' + info.label : info.label;
+  document.getElementById('wsNoteTitle').textContent = '选择一篇笔记';
+  document.getElementById('noteEditor').value = '';
+  document.getElementById('deleteBtn').classList.add('hidden');
+  document.getElementById('workspace').classList.add('open');
+  renderNoteList();
+  document.getElementById('noteEditor').focus();
+}
+
+function closeWorkspace() {
+  if (isDirty) {
+    if (!confirm('有未保存的修改，确定离开吗？')) return;
+  }
+  document.getElementById('workspace').classList.remove('open');
+  currentDept = null;
+  currentNoteId = null;
+  isDirty = false;
+}
+
+function renderNoteList() {
+  const container = document.getElementById('noteList');
+  const notes = getDeptNotes(currentDept);
+  const countEl = document.getElementById('wsNoteCount');
+  countEl.textContent = notes.length + ' 篇笔记';
+
+  if (!notes.length) {
+    container.innerHTML = '<div class="empty-state">暂无笔记<br>点右上角 + 新建</div>';
+    return;
+  }
+  container.innerHTML = notes.map(n => `
+    <div class="note-item ${n.id === currentNoteId ? 'active' : ''}" onclick="selectNote('${n.id}')">
+      <div class="truncate">${n.title || '无标题'}</div>
+      <div class="date">${n.updatedAt || n.createdAt}</div>
+    </div>
+  `).join('');
+}
+
+function selectNote(id) {
+  if (isDirty) {
+    if (!confirm('有未保存的修改，确定切换吗？')) return;
+  }
+  currentNoteId = id;
+  isDirty = false;
+  const notes = getDeptNotes(currentDept);
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  document.getElementById('wsNoteTitle').textContent = note.title || '无标题';
+  document.getElementById('noteEditor').value = note.content || '';
+  document.getElementById('deleteBtn').classList.remove('hidden');
+  renderNoteList();
+}
+
+function saveNote() {
+  if (!currentDept) return;
+  const content = document.getElementById('noteEditor').value.trim();
+  if (!content) { alert('内容不能为空'); return; }
+  const notes = getDeptNotes(currentDept);
+  const title = document.getElementById('wsNoteTitle').textContent === '选择一篇笔记' ? '未命名' : document.getElementById('wsNoteTitle').textContent;
+  if (currentNoteId) {
+    const idx = notes.findIndex(n => n.id === currentNoteId);
+    if (idx > -1) {
+      notes[idx].content = content;
+      notes[idx].title = title;
+      notes[idx].updatedAt = now();
+      if (!notes[idx].title || notes[idx].title === '无标题') notes[idx].title = title;
+    }
+  } else {
+    const newNote = { id: genId(), title: title === '选择一篇笔记' ? '未命名' : title, content, createdAt: now(), updatedAt: now() };
+    notes.unshift(newNote);
+    currentNoteId = newNote.id;
+  }
+  putDeptNotes(currentDept, notes);
+  isDirty = false;
+  document.getElementById('wsNoteTitle').textContent = title;
+  document.getElementById('deleteBtn').classList.remove('hidden');
+  renderNoteList();
+}
+
+function discardEdit() {
+  if (!currentNoteId) {
+    document.getElementById('noteEditor').value = '';
+    return;
+  }
+  const notes = getDeptNotes(currentDept);
+  const note = notes.find(n => n.id === currentNoteId);
+  document.getElementById('noteEditor').value = note ? (note.content || '') : '';
+  isDirty = false;
+}
+
+function deleteNote() {
+  if (!currentNoteId) return;
+  if (!confirm('确定删除这篇笔记吗？')) return;
+  let notes = getDeptNotes(currentDept);
+  notes = notes.filter(n => n.id !== currentNoteId);
+  putDeptNotes(currentDept, notes);
+  currentNoteId = null;
+  document.getElementById('wsNoteTitle').textContent = '选择一篇笔记';
+  document.getElementById('noteEditor').value = '';
+  document.getElementById('deleteBtn').classList.add('hidden');
+  isDirty = false;
+  renderNoteList();
+}
+
+// Auto-save on Ctrl+S / Cmd+S
+document.getElementById('noteEditor').addEventListener('keydown', function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault();
+    saveNote();
+  }
+  isDirty = true;
+});
+
+// ===== NEW NOTE MODAL =====
+function showNewNoteModal() {
+  document.getElementById('newNoteTitle').value = '';
+  document.getElementById('newNoteModal').classList.add('show');
+  setTimeout(() => document.getElementById('newNoteTitle').focus(), 200);
+}
+function closeNewNoteModal() {
+  document.getElementById('newNoteModal').classList.remove('show');
+}
+function confirmNewNote() {
+  const title = document.getElementById('newNoteTitle').value.trim() || '未命名';
+  const notes = getDeptNotes(currentDept);
+  const newNote = { id: genId(), title, content: '', createdAt: now(), updatedAt: now() };
+  notes.unshift(newNote);
+  putDeptNotes(currentDept, notes);
+  currentNoteId = newNote.id;
+  isDirty = false;
+  document.getElementById('wsNoteTitle').textContent = title;
+  document.getElementById('noteEditor').value = '';
+  document.getElementById('deleteBtn').classList.remove('hidden');
+  renderNoteList();
+  closeNewNoteModal();
+  document.getElementById('noteEditor').focus();
+}
+
+// ===== LIXINDAO =====
+const LIXINDAO_PWD = 'KATHERINE891216';
+
+function openLixindaoModal() {
+  document.getElementById('lixindaoPwd').value = '';
+  document.getElementById('lixindaoPwdError').textContent = '';
+  document.getElementById('lixindaoModal').classList.add('show');
+  setTimeout(() => document.getElementById('lixindaoPwd').focus(), 200);
+}
+function closeLixindaoModal() {
+  document.getElementById('lixindaoModal').classList.remove('show');
+}
+function checkLixindaoPwd() {
+  const pwd = document.getElementById('lixindaoPwd').value.trim();
+  if (!pwd) { document.getElementById('lixindaoPwdError').textContent = '请输入密码'; return; }
+  if (pwd === LIXINDAO_PWD) {
+    document.getElementById('lixindaoModal').classList.remove('show');
+    document.getElementById('lixindaoLocked').style.display = 'none';
+    document.getElementById('lixindaoUnlocked').style.display = 'block';
+    updateHubCounts();
+  } else {
+    document.getElementById('lixindaoPwdError').textContent = '密码错误，黑龙白狐不予放行';
+    document.getElementById('lixindaoPwd').classList.add('shake');
+    setTimeout(() => document.getElementById('lixindaoPwd').classList.remove('shake'), 400);
+    document.getElementById('lixindaoPwd').value = '';
+    document.getElementById('lixindaoPwd').focus();
+  }
+}
+function lockLixindao() {
+  document.getElementById('lixindaoUnlocked').style.display = 'none';
+  document.getElementById('lixindaoLocked').style.display = 'block';
+}
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
+});
+
+// Auto-close workspace on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (document.getElementById('workspace').classList.contains('open')) {
+      closeWorkspace();
+    }
+  }
+});
+</script>
+</body>
+</html>

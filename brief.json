@@ -1,0 +1,22 @@
+{
+  "date": "2026-06-14",
+  "updatedAt": "23:37",
+  "items": [
+    {
+      "name": "HackerNews",
+      "icon": "🌍",
+      "items": [
+        {"title": "No, everyone is not using AI for everything", "url": "https://gabrielweinberg.com/p/people-are-consuming-ai-like-they"},
+        {"title": "The Birth and Death of JavaScript (2014)", "url": "https://www.destroyallsoftware.com/talks/the-birth-and-death-of-javascript"},
+        {"title": "Firewood Splitting Simulator", "url": "https://screen.toys/firewood/"},
+        {"title": "Lisp's Influence on Ruby", "url": "https://blog.tacoda.dev/lisps-influence-on-ruby-6a54f1a7740e"},
+        {"title": "Rio de Janeiro's city model beats Qwen3.7 in benchmarks", "url": "https://twitter.com/zenmagnets/status/2065796012820848699"},
+        {"title": "UK set to announce social media ban for under-16s", "url": "https://www.manchestereveningnews.co.uk/news/uk-news/uk-set-announce-social-media-34119132"},
+        {"title": "The only scalable delete in Postgres is DROP TABLE", "url": "https://planetscale.com/blog/the-only-scalable-delete"},
+        {"title": "A 'cold blob' in the Atlantic could be a sign of AMOC shutdown", "url": "https://www.cnn.com/2026/06/12/climate/cold-blob-atlantic-amoc-ocean-circulation"},
+        {"title": "Formal Methods and the Future of Programming", "url": "https://blog.janestreet.com/formal-methods-at-jane-street-index/"},
+        {"title": "How did Atari apply side art to Arcade Cabinets?", "url": "https://arcadeblogger.com/2026/06/14/how-did-atari-apply-side-art-to-arcade-cabinets/"}
+      ]
+    }
+  ]
+}
