@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="content-index.js"></script>
   <style>
     :root {
       --gold: #D4A574; --gold-light: #E8C99B; --gold-dark: #B8895C;
@@ -379,15 +380,7 @@ const DEPT_DIRS = {
 };
 
 // ===== 文件内容索引 =====
-let contentIndex = null;
-
-function loadContentIndex() {
-  fetch('./content-index.json?t=' + Date.now())
-    .then(r => { if (!r.ok) throw new Error('No index'); return r.json(); })
-    .then(data => { contentIndex = data; })
-    .catch(() => { contentIndex = {}; });
-}
-loadContentIndex();
+let contentIndex = window.__CONTENT_INDEX__ || {};
 
 function getNotes() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) { return {}; }
