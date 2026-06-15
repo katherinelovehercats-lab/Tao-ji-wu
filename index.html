@@ -370,6 +370,25 @@ const DEPTS = {
   lixindao_letter: { label: '💌 私人信件', icon: '💌', subtitle: '梨心岛' },
 };
 
+// Department → content-index directory mapping
+const DEPT_DIRS = {
+  wenxue: '文学',
+  xuanxue: '玄学',
+  zhexue: '哲学',
+  sheying: '摄影影视',
+};
+
+// ===== 文件内容索引 =====
+let contentIndex = null;
+
+function loadContentIndex() {
+  fetch('./content-index.json?t=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error('No index'); return r.json(); })
+    .then(data => { contentIndex = data; })
+    .catch(() => { contentIndex = {}; });
+}
+loadContentIndex();
+
 function getNotes() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) { return {}; }
 }
@@ -564,18 +583,30 @@ function renderNoteList() {
   const container = document.getElementById('noteList');
   const notes = getDeptNotes(currentDept);
   const countEl = document.getElementById('wsNoteCount');
-  countEl.textContent = notes.length + ' 篇笔记';
 
-  if (!notes.length) {
+  // Get file-based notes from content-index
+  const dir = DEPT_DIRS[currentDept];
+  const fileNotes = (contentIndex && dir && contentIndex[dir]) ? contentIndex[dir] : [];
+
+  // Merge: file notes first (read-only), then localStorage notes
+  const allItems = [
+    ...fileNotes.map(f => ({ id: 'file:' + f.path, title: f.title, isFile: true, filePath: f.path, updatedAt: '📄 文件' })),
+    ...notes.map(n => ({ ...n, isFile: false }))
+  ];
+
+  countEl.textContent = allItems.length + ' 条';
+
+  if (!allItems.length) {
     container.innerHTML = '<div class="empty-state">暂无笔记<br>点右上角 + 新建</div>';
     return;
   }
-  container.innerHTML = notes.map(n => `
-    <div class="note-item ${n.id === currentNoteId ? 'active' : ''}" onclick="selectNote('${n.id}')">
-      <div class="truncate">${n.title || '无标题'}</div>
-      <div class="date">${n.updatedAt || n.createdAt}</div>
-    </div>
-  `).join('');
+  container.innerHTML = allItems.map(n => {
+    const active = (n.isFile ? 'file:' + n.filePath : n.id) === currentNoteId;
+    return `<div class="note-item ${active ? 'active' : ''}" onclick="selectNote('${n.isFile ? 'file:' + n.filePath : n.id}')">
+      <div class="truncate ${n.isFile ? 'opacity-70' : ''}">${n.isFile ? '📄 ' : ''}${n.title || '无标题'}</div>
+      <div class="date">${n.updatedAt || ''}</div>
+    </div>`;
+  }).join('');
 }
 
 function selectNote(id) {
@@ -584,6 +615,22 @@ function selectNote(id) {
   }
   currentNoteId = id;
   isDirty = false;
+
+  // File-based note
+  if (id.startsWith('file:')) {
+    const filePath = id.slice(5);
+    const dir = DEPT_DIRS[currentDept];
+    const files = (contentIndex && dir && contentIndex[dir]) ? contentIndex[dir] : [];
+    const file = files.find(f => f.path === filePath);
+    if (!file) return;
+    document.getElementById('wsNoteTitle').textContent = '📄 ' + file.title;
+    document.getElementById('noteEditor').value = file.content || '';
+    document.getElementById('deleteBtn').classList.add('hidden');
+    renderNoteList();
+    return;
+  }
+
+  // localStorage note
   const notes = getDeptNotes(currentDept);
   const note = notes.find(n => n.id === id);
   if (!note) return;
@@ -595,6 +642,11 @@ function selectNote(id) {
 
 function saveNote() {
   if (!currentDept) return;
+  // Don't save file-based notes
+  if (currentNoteId && currentNoteId.startsWith('file:')) {
+    alert('文件笔记只读，请新建笔记来保存修改');
+    return;
+  }
   const content = document.getElementById('noteEditor').value.trim();
   if (!content) { alert('内容不能为空'); return; }
   const notes = getDeptNotes(currentDept);
